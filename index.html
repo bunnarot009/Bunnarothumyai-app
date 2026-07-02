@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เกมไก่วิ่งหลบสิ่งกีดขวาง (Chicken Run)</title>
+    <title>Retro Snake Game</title>
     <style>
         * {
             margin: 0;
@@ -13,127 +13,271 @@
         }
 
         body {
-            background-color: #eef2f3;
+            background-color: #1a1a24;
+            color: #fff;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            user-select: none;
             overflow: hidden;
+            user-select: none;
         }
 
         h1 {
-            color: #333;
-            margin-bottom: 5px;
-            font-size: 1.8rem;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #4ade80;
+            text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
         }
 
-        .score-board {
-            font-size: 1.1rem;
-            color: #555;
+        .score-container {
+            display: flex;
+            gap: 30px;
+            font-size: 1.2rem;
             margin-bottom: 15px;
-            font-weight: bold;
+            background: #27273a;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
-        /* กล่องครอบ Canvas */
-        .game-container {
+        .score-box span {
+            font-weight: bold;
+            color: #4ade80;
+        }
+
+        /* พื้นที่เล่นเกม */
+        .game-box {
             position: relative;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border: 4px solid #3f3f56;
             border-radius: 10px;
-            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background-color: #111116;
         }
 
         canvas {
-            background-color: #f7f7f7;
             display: block;
-            cursor: pointer;
         }
 
-        /* หน้าจอจำลองเมื่อ Game Over */
-        .overlay {
-            display: none;
+        /* หน้าต่างแจ้งเตือนเมื่อจบเกม หรือเริ่มเกม */
+        .screen-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background: rgba(17, 17, 22, 0.85);
+            display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: white;
-            text-align: center;
+            border-radius: 6px;
+            transition: all 0.3s ease;
         }
 
-        .overlay h2 {
-            font-size: 2.5rem;
-            color: #ff4757;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        .screen-overlay h2 {
+            font-size: 2rem;
+            color: #f87171;
+            margin-bottom: 15px;
         }
 
-        .overlay p {
-            background-color: #333;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 1rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        .btn-start {
+            background-color: #4ade80;
+            color: #111116;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .btn-start:hover {
+            background-color: #22c55e;
+            transform: scale(1.05);
+        }
+
+        .instruction {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #9ca3af;
         }
     </style>
 </head>
 <body>
 
-    <h1>Chicken Jump! 🐔</h1>
-    <div class="score-board">คะแนน: <span id="score">0</span> | คะแนนสูงสุด: <span id="highScore">0</span></div>
+    <h1>SNAKE GAME 🐍</h1>
 
-    <div class="game-container">
-        <canvas id="gameCanvas" width="600" height="250"></canvas>
-        <div id="gameOverOverlay" class="overlay">
-            <h2>GAME OVER</h2>
-            <p>กด Spacebar หรือ แตะหน้าจอเพื่อเริ่มใหม่</p>
+    <div class="score-container">
+        <div class="score-box">คะแนนปัจจุบัน: <span id="currentScore">0</span></div>
+        <div class="score-box">คะแนนสูงสุด: <span id="highScore">0</span></div>
+    </div>
+
+    <div class="game-box">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        
+        <div id="screenOverlay" class="screen-overlay">
+            <h2 id="overlayText">พร้อมเล่นหรือยัง?</h2>
+            <button class="btn-start" onclick="startGame()">เริ่มเกม (กด Spacebar)</button>
+            <p class="instruction">ใช้ปุ่มลูกศร (↑ ↓ ← →) ในการควบคุม</p>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreDisplay = document.getElementById('score');
-        const highScoreDisplay = document.getElementById('highScore');
-        const overlay = document.getElementById('gameOverOverlay');
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreDisplay = document.getElementById("currentScore");
+        const highScoreDisplay = document.getElementById("highScore");
+        const overlay = document.getElementById("screenOverlay");
+        const overlayText = document.getElementById("overlayText");
 
-        // ตั้งค่าตัวแปรระบบเกม
+        // ตั้งค่าขนาดกริด (Grid)
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+
+        // ตัวแปรควบคุมระบบเกม
+        let snake = [];
+        let food = { x: 0, y: 0 };
+        let dx = gridSize; // ความเร็วแนวแกน X
+        let dy = 0;        // ความเร็วแนวแกน Y
         let score = 0;
         let highScore = 0;
-        let isGameOver = false;
-        let gameSpeed = 5;
-        let gravity = 0.6;
+        let gameInterval;
+        let isRunning = false;
 
-        // วัตถุตัวละครไก่
-        const chicken = {
-            x: 50,
-            y: 200,
-            width: 40,
-            height: 40,
-            velocityY: 0,
-            jumpForce: -12,
-            isGrounded: true,
-            draw() {
-                // ตัวไก่ (วงกลม/วงรีสีเหลือง)
-                ctx.fillStyle = '#f39c12';
-                ctx.beginPath();
-                ctx.arc(this.x + 20, this.y + 20, 20, 0, Math.PI * 2);
-                ctx.fill();
+        // ฟังก์ชันเริ่มเกมใหม่
+        function startGame() {
+            snake = [
+                { x: gridSize * 5, y: gridSize * 10 },
+                { x: gridSize * 4, y: gridSize * 10 },
+                { x: gridSize * 3, y: gridSize * 10 }
+            ];
+            dx = gridSize;
+            dy = 0;
+            score = 0;
+            scoreDisplay.innerText = score;
+            overlay.style.display = "none";
+            isRunning = true;
+            spawnFood();
+            
+            clearInterval(gameInterval);
+            gameInterval = setInterval(updateGame, 100); // ความเร็วเกม (100ms ต่อรอบ)
+        }
 
-                // หงอนไก่ (สีแดงด้านบน)
-                ctx.fillStyle = '#e74c3c';
-                ctx.beginPath();
-                ctx.arc(this.x + 20, this.y, 8, 0, Math.PI * 2);
-                ctx.fill();
+        // ฟังก์ชันสุ่มตำแหน่งอาหาร
+        function spawnFood() {
+            food.x = Math.floor(Math.random() * tileCount) * gridSize;
+            food.y = Math.floor(Math.random() * tileCount) * gridSize;
 
-                // ปากไก่ (สามเหลี่ยมสีส้มเข้มหันไปทางขวา)
-                ctx.fillStyle = '#d35400';
-                ctx.beginPath();
-                ctx.moveTo(this.x + 38, this.y + 15);
-                ctx.lineTo(this.x + 48, this.y + 20);
-                ctx.lineTo
+            // ป้องกันไม่ให้อาหารไปเกิดบนตัวงู
+            snake.forEach(part => {
+                if (part.x === food.x && part.y === food.y) {
+                    spawnFood();
+                }
+            });
+        }
+
+        // ลูปหลักอัปเดตสถานะเกม
+        function updateGame() {
+            // 1. ขยับหัวงูไปข้างหน้าตามทิศทาง
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            // 2. ตรวจสอบการชนขอบกำแพง หรือชนตัวเอง
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height || checkSelfCollision(head)) {
+                gameOver();
+                return;
+            }
+
+            // เพิ่มหัวเข้าไปข้างหน้าสุดของอาร์เรย์
+            snake.unshift(head);
+
+            // 3. ตรวจสอบว่างูกินอาหารหรือไม่
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreDisplay.innerText = score;
+                spawnFood();
+            } else {
+                // ถ้าไม่ได้กินอาหาร ให้ตัดหางออก เพื่อให้ตัวยาวเท่าเดิม
+                snake.pop();
+            }
+
+            // 4. วาดทุกอย่างลงบนหน้าจอ
+            draw();
+        }
+
+        // ตรวจสอบการชนตัวเอง
+        function checkSelfCollision(head) {
+            for (let i = 0; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // ฟังก์ชันวาดกราฟิก
+        function draw() {
+            // ล้างหน้าจอเก่า
+            ctx.fillStyle = "#111116";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // วาดอาหาร (สีแดงนีออน)
+            ctx.fillStyle = "#ff4757";
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#ff4757";
+            ctx.beginPath();
+            ctx.arc(food.x + gridSize/2, food.y + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // วาดตัวงู (สีเขียวนีออน)
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "#4ade80";
+            snake.forEach((part, index) => {
+                // หัวงูให้ใช้สีสว่างกว่าตัว
+                ctx.fillStyle = index === 0 ? "#4ade80" : "#22c55e";
+                ctx.fillRect(part.x + 1, part.y + 1, gridSize - 2, gridSize - 2);
+            });
+            
+            // รีเซ็ตค่า Shadow เพื่อประสิทธิภาพการทำงาน
+            ctx.shadowBlur = 0;
+        }
+
+        // ฟังก์ชันเมื่อจบเกม
+        function gameOver() {
+            isRunning = false;
+            clearInterval(gameInterval);
+            overlayText.innerText = "GAME OVER 💀";
+            if (score > highScore) {
+                highScore = score;
+                highScoreDisplay.innerText = highScore;
+            }
+            overlay.style.display = "flex";
+        }
+
+        // ระบบควบคุมทิศทาง
+        window.addEventListener("keydown", e => {
+            if (!isRunning && e.code === "Space") {
+                startGame();
+                return;
+            }
+
+            switch (e.key) {
+                case "ArrowUp":
+                    if (dy === 0) { dx = 0; dy = -gridSize; } // ห้ามหักหลบกลับลำตรงๆ
+                    break;
+                case "ArrowDown":
+                    if (dy === 0) { dx = 0; dy = gridSize; }
+                    break;
+                case "ArrowLeft":
+                    if (dx === 0) { dx = -gridSize; dy = 0; }
+                    break;
+                case "ArrowRight":
+                    if (dx === 0) { dx = gridSize; dy = 0; }
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
